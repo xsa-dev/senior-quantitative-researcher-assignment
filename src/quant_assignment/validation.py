@@ -40,7 +40,16 @@ def _pcap_checks(name: str, df: pd.DataFrame) -> list[str]:
         lines.append(f"- decode_status distribution: {dist}")
     missing_expected = [c for c in ECONOMIC_FIELDS if c in df.columns and df[c].notna().sum()]
     if missing_expected:
-        lines.append(f"- WARNING: economic fields populated: {missing_expected} (must be schema-backed)")
+        schema_backed = False
+        if "schema_provenance" in df.columns:
+            schema_backed = bool(df.loc[df[[c for c in missing_expected if c in df.columns]].notna().any(axis=1), "schema_provenance"].notna().all())
+        if "decode_status" in df.columns:
+            populated = df[[c for c in missing_expected if c in df.columns]].notna().any(axis=1)
+            schema_backed = schema_backed or bool(df.loc[populated, "decode_status"].fillna("").astype(str).str.startswith("schema_backed_").all())
+        if schema_backed:
+            lines.append(f"- economic fields populated with schema provenance: {missing_expected}")
+        else:
+            lines.append(f"- WARNING: economic fields populated without schema provenance: {missing_expected}")
     else:
         lines.append("- fabricated economic fields check: PASS; canonical symbol/price/size/side/message/order fields are null or absent")
     if name == "reconstructed_book.csv":
