@@ -1,0 +1,17 @@
+.venv/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+.DS_Store
+
+# Raw assignment files stay local / external storage only.
+documents/
+
+# Generated result artifacts are delivered via Google Drive, not GitHub.
+# Keep only the directory skeleton with .gitkeep files so README/docs can point
+# to stable local target paths.
+outputs/**
+!outputs/
+!outputs/**/
+!outputs/**/.gitkeep

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-assignment"
+version = "0.1.0"
+description = "Interview-ready quantitative researcher assignment solution"
+requires-python = ">=3.9"
+dependencies = [
+  "pandas>=2.0",
+  "numpy>=1.24",
+  "matplotlib>=3.7",
+  "dpkt>=1.9.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
