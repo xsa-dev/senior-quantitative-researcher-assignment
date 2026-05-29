@@ -37,7 +37,10 @@ def main():
             f"Rows: {len(s)}\n"
             f"Contracts: {s['near_contract'].iloc[0]} - {s['far_contract'].iloc[0]}\n"
             f"Source: {source}\n"
-            "Spread uses only rows with decoded real bid/ask/mid and bid<=ask.\n"
+            f"Near bid/ask/mid: {s['near_bid'].iloc[0]} / {s['near_ask'].iloc[0]} / {s['near_mid'].iloc[0]}\n"
+            f"Far bid/ask/mid: {s['far_bid'].iloc[0]} / {s['far_ask'].iloc[0]} / {s['far_mid'].iloc[0]}\n"
+            f"Spread: {s['spread'].iloc[0]}\n"
+            "Spread uses only decoded real bid/ask/mid rows with positive prices and bid<=ask. Contract selection is calendar-sorted by WDO futures month code and aligned with merge_asof tolerance.\n"
         )
     else:
         fig, ax = plt.subplots(figsize=(10, 4))

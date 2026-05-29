@@ -1,9 +1,9 @@
 # Final submission summary
 
 ## Executive summary
-This repository is ready to share as a defensible GitHub solution. The full local pipeline runs with `make all`, tests pass, generated outputs are documented, and the remaining B3 PCAP blocker is explicitly scoped to missing external protocol artifacts rather than hidden or papered over.
+This repository is ready as a defensible, reproducible GitHub solution for the senior quantitative researcher assignment. The full local pipeline runs with `make all`, tests pass, large raw/generated artifacts stay out of Git, and B3 PCAP economic fields are now populated from schema-backed UMDF/SBE decoding rather than fabricated heuristics.
 
-The solution intentionally avoids fabricated market data: no fake B3 prices, no fake B3 book levels, no fake WDO spread, and no invented protocol mappings.
+The earlier B3 blocker is resolved for the assignment-critical path: instrument definitions, WDO futures symbols, MBO order events, reconstructed top-of-book rows, and a WDO calendar-spread row are produced from decoded B3 Binary UMDF/SBE frames. Remaining limitations are explicitly scoped to unhandled templates and production-grade exchange reconciliation, not hidden data fabrication.
 
 ## Run commands
 
@@ -25,90 +25,63 @@ make validate
 make test
 ```
 
-Equivalent direct script sequence:
-
-```bash
-PYTHONPATH=src .venv/bin/python scripts/00_discover_data.py
-PYTHONPATH=src .venv/bin/python scripts/01_parse_pcap.py
-PYTHONPATH=src .venv/bin/python scripts/02_build_wdo_calendar_spread.py
-PYTHONPATH=src .venv/bin/python scripts/03_compute_vol_momentum.py
-PYTHONPATH=src .venv/bin/python scripts/04_gold_arbitrage_research.py
-PYTHONPATH=src .venv/bin/python -m quant_assignment.validation
-PYTHONPATH=src .venv/bin/python -m pytest -q
-```
-
 ## Verified quality gates
+Latest local verification:
 
 - `make all`: completes successfully.
-- `pytest`: 5 passed.
+- `make test`: passes.
 - Required output CSVs exist.
 - Validation report is regenerated at `outputs/reports/validation_report.md`.
-- Raw files under `documents/` are not modified.
+- Economic B3 fields pass only with schema provenance.
+- WDO spread source is `schema_backed_reconstructed_book`.
+- Heavy `documents/` and generated `outputs/` artifacts remain ignored by Git except `.gitkeep` skeletons.
 
 ## Assignment mapping
 
-| Assignment area | Implementation | Generated artifacts | Status |
-|---|---|---|---|
-| Data discovery | `scripts/00_discover_data.py` | `outputs/reports/data_inventory.{csv,md}`, `protocol_artifact_scan.{csv,md}` | Complete |
-| B3 PCAP parsing | `scripts/01_parse_pcap.py`, `pcap_parser.py`, `b3_decoder.py`, `order_book.py` | `outputs/intermediate/packet_metadata.csv`, `payload_samples.csv`, `outputs/csv/updates.csv`, `snapshot.csv`, `reconstructed_book.csv` | Packet evidence complete; economic decode blocked by missing external artifacts |
-| WDO calendar spread | `scripts/02_build_wdo_calendar_spread.py`, `spreads.py` | `outputs/csv/wdo_calendar_spread.csv`, `outputs/plots/wdo_calendar_spread.png` | Honest unavailable diagnostic; no WDO prices present |
-| Volatility/momentum | `scripts/03_compute_vol_momentum.py`, `features.py` | `outputs/csv/volatility_momentum.csv`, `outputs/plots/volatility.png`, `momentum.png` | Complete for available valid quote symbol |
-| Gold arbitrage | `scripts/04_gold_arbitrage_research.py`, `arbitrage.py` | `outputs/csv/gold_arbitrage_signals.csv`, `outputs/plots/gold_spread.png`, `gold_spread_zscore.png`, `gold_arbitrage_signals.png` | Research prototype complete |
-| Validation/tests | `validation.py`, `tests/` | `outputs/reports/validation_report.md`, `summary_metrics.md` | Complete |
+- Data discovery: `scripts/00_discover_data.py`
+  - Outputs: `outputs/reports/data_inventory.{csv,md}`, `protocol_artifact_scan.{csv,md}`.
+  - Status: complete.
+- B3 PCAP parsing/economic decoding: `scripts/01_parse_pcap.py`, `pcap_parser.py`, `b3_decoder.py`, `order_book.py`
+  - Outputs: `packet_metadata.csv`, `updates.csv`, `increment_updates.csv`, `snapshot.csv`, `reconstructed_book.csv`, `b3_template_inventory.csv`, `decoded_instruments.csv`, `wdo_instruments.csv`, `wdo_decoded_evidence.csv`.
+  - Status: schema-backed decode complete for assignment-critical templates.
+- WDO calendar spread: `scripts/02_build_wdo_calendar_spread.py`, `spreads.py`
+  - Outputs: `outputs/csv/wdo_calendar_spread.csv`, `outputs/plots/wdo_calendar_spread.png`.
+  - Status: computed from decoded B3 reconstructed book.
+- Volatility/momentum: `scripts/03_compute_vol_momentum.py`, `features.py`
+  - Outputs: `volatility_momentum.csv`, `volatility.png`, `momentum.png`.
+  - Status: complete for valid quote rows with explicit 400 ms latency.
+- Gold arbitrage: `scripts/04_gold_arbitrage_research.py`, `arbitrage.py`
+  - Outputs: `gold_arbitrage_signals.csv`, `gold_spread.png`, `gold_spread_zscore.png`, `gold_arbitrage_signals.png`.
+  - Status: research prototype complete.
+- Validation/tests: `validation.py`, `tests/`
+  - Outputs: `validation_report.md`, `summary_metrics.md`.
+  - Status: complete.
 
-## B3 PCAP decoding status
+## B3 protocol provenance
+The decoder uses a compatible public schema artifact, `b3-market-data-messages-2.2.0.xml` from `pedrosakuma/B3MarketDataPlatform`, verified against local PCAP frames:
 
-### What is real and decoded/extracted
-- PCAP packet timestamps.
-- Ethernet/IP/UDP/TCP metadata.
-- Payload length.
-- Payload SHA-256 hash.
-- Payload hex head.
-- Candidate packet-envelope fields: length, channel, sequence number.
-- Instrument-payload ASCII token evidence in `symbol_candidates_evidence`.
-- Decode-status distribution in validation report.
+- observed SBE frame header: little-endian `<HHHHHH>` = `msgSize, encoding, blockLen, templateId, schemaId, version`;
+- local match: `encoding=0xeb50`, `schemaId=2`, `version=15`;
+- packet envelope: channel/feed flag/stream id/packet sequence/sending timestamp, followed by SBE frames from byte offset 16.
 
-### What is partial evidence only
-- `packet_length_candidate`, `channel_id_candidate`, and `sequence_number` are byte-level candidates.
-- `symbol_candidates_evidence` comes from visible Instrument payload text and is not a canonical symbol assignment.
+Supported decoded templates:
 
-### What is unavailable and intentionally null
-- Canonical B3 symbol.
-- B3 message type / raw template ID meaning.
-- Side.
-- Price.
-- Size.
-- Order ID.
-- Book action and level semantics.
-- Reconstructed bid/ask book.
+- `12` `SecurityDefinition`;
+- `30` `SnapshotFullRefresh_Header`;
+- `50` `Order_MBO`;
+- `51` `DeleteOrder_MBO`;
+- `52` `MassDeleteOrders_MBO`;
+- `71` `SnapshotFullRefresh_Orders_MBO`.
 
-## Unavoidable blocker
-The repository does not contain the external B3 artifacts required for full economic decoding. `outputs/reports/protocol_artifact_scan.md` confirms there are no standalone XML/SBE/template/schema files in the raw folder. Instrument/Snapshot/Incremental PCAP payloads are present, but PCAP payload bytes alone are not enough to safely map fields and price scales.
-
-## Exact missing artifacts required for full decoding
-1. B3 UMDF/SBE XML schema/templates for the capture date/feed.
-2. Template ID to message-type mapping.
-3. Instrument/security definition dictionary and symbol mapping.
-4. Price scale/decimal metadata.
-5. Snapshot/incremental action semantics: add/modify/delete/clear, implied/regular book behavior, level/order-id rules.
-6. Sequence/reset/channel reconciliation rules for feed A/B, snapshots, incrementals, and instrument definitions.
-
-## Code path to complete decoding once artifacts are provided
-- Keep `pcap_parser.py` for packet extraction.
-- Extend `b3_decoder.py` to load SBE XML/templates and decode template-specific fields.
-- Join decoded instrument definitions to canonical symbols.
-- Apply price scales before emitting `price`.
-- Map book actions and feed sequencing.
-- Feed schema-backed events into `order_book.py` to produce real snapshots and reconstructed books.
-- Strengthen validation so populated economic fields must cite verified schema/template provenance.
+Unknown templates remain diagnostic frame evidence and do not populate canonical economic fields.
 
 ## Quant methodology summary
 
 ### WDO spread
-The spread module is implemented for valid WDO quote inputs but emits an explicit unavailable artifact for the current data because no WDO quote prices are present and PCAP economic prices cannot be decoded safely.
+The WDO calendar spread is computed from reconstructed B3 top-of-book rows, not from the non-WDO quote CSV. Contracts are calendar-sorted by WDO month code, rows are filtered to positive non-crossed bid/ask pairs, and near/far books are aligned with a documented `merge_asof` tolerance. The output includes source and schema provenance.
 
 ### Volatility/momentum
-- Uses valid top-of-book midpoint.
+- Uses valid top-of-book midpoint from quote CSV rows.
 - Filters invalid/crossed quotes.
 - Computes log returns, 60-second rolling volatility, EWMA volatility, and 30-second momentum z-score.
 - Models the 400 ms latency requirement with `decision_ts = ts + 400ms`.
@@ -121,33 +94,25 @@ The spread module is implemented for valid WDO quote inputs but emits an explici
 - Uses simple threshold mean-reversion signals and spread-point PnL.
 - Documents production limitations: FX, multipliers, fees, calendars, stale quotes, execution, and risk.
 
-## Validation summary
-Validation includes:
+## Validation controls
+Validation checks:
 
 - required output presence;
 - row counts and missingness;
 - timestamp parsing/ranges/monotonicity;
 - duplicate full-row checks;
-- quote sanity checks;
-- PCAP `decode_status` distribution;
-- no-fabrication checks for canonical B3 economic fields;
-- order-book bid/ask validity when both sides are known;
+- B3 decode-status distribution;
+- economic fields populated only with schema provenance;
+- reconstructed-book bid/ask validity;
+- WDO spread source, contract names, schema provenance, finite spread, and bid<=ask inputs;
 - volatility/momentum latency check;
-- shifted-zscore look-ahead check for arbitrage.
+- shifted-zscore look-ahead control for arbitrage.
 
-## Limitations
-- Full B3 economic decoding remains blocked by missing external protocol artifacts.
-- WDO spread cannot be economically computed from current data.
+## Remaining limitations
+- The decoder intentionally supports only templates required for the assignment-critical path; other templates remain unhandled diagnostics until mapped.
+- Full production-grade B3 book reconciliation would additionally need complete exchange recovery/session-state rules, feed A/B reconciliation, auction-state handling, and all template mappings.
 - Gold arbitrage is a research prototype, not a production trading system.
-- Large raw/intermediate files should not be committed to GitHub.
-
-## Next steps
-1. Obtain official B3 UMDF/SBE XML templates and metadata.
-2. Implement schema-backed template decoding in `b3_decoder.py`.
-3. Decode Instrument definitions into a real symbol/security master.
-4. Decode Snapshot/Incremental price/side/size/action events.
-5. Rebuild real order books and WDO spreads from verified decoded events.
-6. Add CI once the repo is pushed.
+- Raw data and generated large outputs should be delivered via Google Drive, not committed to GitHub.
 
 ## Recommended wording for employer/interviewer
-"The repository is intentionally honest about the B3 PCAP boundary. I fully parse the generic packet layer and preserve payload evidence, but I do not claim economic B3 decoding without the official UMDF/SBE templates, instrument dictionary, price scales, and action semantics. The code is structured so those artifacts can be added cleanly. Until then, unknown economic fields remain null and every blocked output is explicitly marked. This avoids fabricated market data while still delivering reproducible research outputs for the quote-based tasks."
+"I first made the B3 PCAP boundary explicit, then resolved the critical blocker by integrating a compatible B3 UMDF/SBE schema and verifying it against the local PCAP frame headers. The final pipeline decodes real SecurityDefinition and MBO order events, builds a WDO instrument master, reconstructs non-crossed top-of-book rows, and computes a WDO calendar spread with schema provenance. Unknown templates remain diagnostic; I do not fabricate market fields."

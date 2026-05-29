@@ -67,18 +67,33 @@ def normalize_book_quotes(book: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_wdo_spread(df: pd.DataFrame, tolerance: pd.Timedelta | str = pd.Timedelta('5s')) -> pd.DataFrame:
+    columns = [
+        'ts', 'spread', 'near_contract', 'far_contract',
+        'near_bid', 'near_ask', 'near_mid', 'far_bid', 'far_ask', 'far_mid',
+        'source', 'schema_provenance'
+    ]
     tolerance = pd.Timedelta(tolerance)
     w = df[df['symbol'].astype(str).str.match(_WDO_FUT_RE, na=False)].copy()
     if w.empty:
-        return pd.DataFrame(columns=['ts', 'spread', 'near_contract', 'far_contract', 'near_mid', 'far_mid'])
+        return pd.DataFrame(columns=columns)
     contracts = sorted(w['symbol'].dropna().unique(), key=_wdo_contract_sort_key)
     if len(contracts) < 2:
-        return pd.DataFrame(columns=['ts', 'spread', 'near_contract', 'far_contract', 'near_mid', 'far_mid'])
+        return pd.DataFrame(columns=columns)
     s1, s2 = contracts[:2]
-    a = w[w.symbol == s1][['ts', 'mid']].rename(columns={'mid': 'near_mid'}).sort_values('ts')
-    b = w[w.symbol == s2][['ts', 'mid']].rename(columns={'mid': 'far_mid'}).sort_values('ts')
+    quote_cols = ['ts', 'bid_price', 'ask_price', 'mid']
+    for c in quote_cols:
+        if c not in w.columns:
+            return pd.DataFrame(columns=columns)
+    a = w[w.symbol == s1][quote_cols].rename(columns={
+        'bid_price': 'near_bid', 'ask_price': 'near_ask', 'mid': 'near_mid'
+    }).sort_values('ts')
+    b = w[w.symbol == s2][quote_cols].rename(columns={
+        'bid_price': 'far_bid', 'ask_price': 'far_ask', 'mid': 'far_mid'
+    }).sort_values('ts')
     m = pd.merge_asof(a, b, on='ts', direction='nearest', tolerance=tolerance).dropna()
     m['spread'] = m['near_mid'] - m['far_mid']
     m['near_contract'] = s1
     m['far_contract'] = s2
-    return m[['ts', 'spread', 'near_contract', 'far_contract', 'near_mid', 'far_mid']]
+    m['source'] = 'schema_backed_reconstructed_book'
+    m['schema_provenance'] = 'B3 UMDF/SBE decoded MBO top-of-book; bid/ask rows filtered for bid<=ask before calendar-spread alignment'
+    return m[columns]

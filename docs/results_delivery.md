@@ -23,17 +23,19 @@ After running the pipeline locally, or after downloading the shared result bundl
 outputs/csv/            final CSV tables for the assignment
 outputs/intermediate/   packet metadata and payload evidence tables
 outputs/plots/          generated PNG plots
-outputs/reports/        validation, inventory, and protocol-scan reports
+outputs/reports/        validation, inventory, protocol and decoded-instrument reports
 ```
 
 ## Expected generated artifacts
 
 ### `outputs/csv/`
 
-- `updates.csv` — packet-derived update/event table; economic B3 fields stay null without official protocol artifacts.
-- `snapshot.csv` — snapshot-compatible table; economic B3 fields stay null without official protocol artifacts.
-- `reconstructed_book.csv` — explicit blocked top-of-book artifact when schema-backed reconstruction is unavailable.
-- `wdo_calendar_spread.csv` — WDO spread artifact; empty diagnostic if WDO prices are unavailable.
+- `updates.csv` — schema-backed B3 event table plus diagnostic frames.
+- `increment_updates.csv` — incremental-feed subset with decoded symbol/side/price/size/order/action where supported.
+- `snapshot.csv` — snapshot-compatible decoded/diagnostic table.
+- `snapshot_updates.csv` — snapshot-source subset.
+- `reconstructed_book.csv` — non-crossed top-of-book reconstructed from decoded B3 MBO events.
+- `wdo_calendar_spread.csv` — WDO futures calendar spread from decoded reconstructed B3 book rows.
 - `volatility_momentum.csv` — quote-derived volatility/momentum feature table.
 - `gold_arbitrage_signals.csv` — aligned B3/MOEX gold arbitrage research table.
 
@@ -57,6 +59,11 @@ outputs/reports/        validation, inventory, and protocol-scan reports
 - `data_inventory.md`
 - `protocol_artifact_scan.csv`
 - `protocol_artifact_scan.md`
+- `b3_template_inventory.csv`
+- `b3_protocol_provenance.md`
+- `decoded_instruments.csv`
+- `wdo_instruments.csv`
+- `wdo_decoded_evidence.csv`
 - `validation_report.md`
 - `summary_metrics.md`
 
@@ -76,3 +83,7 @@ The pipeline will regenerate the files under `outputs/` from local raw input dat
 3. Upload or separately share raw assignment files from `documents/` only if the interviewer expects them and access policy allows it.
 4. Insert Google Drive links into the final submission document / Google Doc.
 5. Keep GitHub focused on code, docs, tests, reproducibility commands, and this output-directory contract.
+
+## Current upload status
+
+The repository is ready for Google Drive delivery, but this local Hermes session could not upload automatically because Google OAuth refresh currently fails with `invalid_grant: Bad Request`. Re-authenticate Google Workspace/Drive and then upload the generated `outputs/` bundle, or upload it manually through the browser.

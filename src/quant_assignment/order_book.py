@@ -56,11 +56,20 @@ def reconstruct_book(snapshot: pd.DataFrame) -> pd.DataFrame:
         price = float(r['price'])
         size = float(r['size'])
         order_id = r.get('order_id')
-        if pd.isna(order_id):
+        missing_order_id = pd.isna(order_id)
+        if missing_order_id:
             order_id = f"snapshot:{idx}:{symbol}:{side}:{price}"
         book = books.setdefault(symbol, {})
         if action in {'delete', 'delete_thru', 'delete_from'}:
-            book.pop(order_id, None)
+            if missing_order_id:
+                # B3 mass-delete templates do not carry a secondaryOrderID.
+                # Apply the side-level clear to all active MBO orders for the
+                # instrument rather than popping a synthetic placeholder key.
+                for key, order in list(book.items()):
+                    if order.get('side') == side:
+                        book.pop(key, None)
+            else:
+                book.pop(order_id, None)
         elif action in {'new', 'change', 'snapshot'}:
             if size > 0:
                 book[order_id] = {'side': side, 'price': price, 'size': size, 'timestamp': r['timestamp'], 'source': r.get('source_file')}
@@ -93,4 +102,14 @@ def reconstruct_book(snapshot: pd.DataFrame) -> pd.DataFrame:
             'decode_status': 'schema_backed_reconstructed' if mid is not None else 'schema_backed_partial_book',
             'notes': 'Top of book reconstructed from decoded B3 MBO order events; no price/size values were fabricated.'
         })
-    return pd.DataFrame(rows, columns=cols).sort_values(['symbol']).reset_index(drop=True)
+    result = pd.DataFrame(rows, columns=cols)
+    if not result.empty:
+        bid = pd.to_numeric(result['bid_price_1'], errors='coerce')
+        ask = pd.to_numeric(result['ask_price_1'], errors='coerce')
+        crossed = bid.notna() & ask.notna() & (bid > ask)
+        # Crossed states can occur in auction/uncleared local replay windows when
+        # not every market-state template is economically decoded. The final
+        # reconstructed top-of-book output keeps only non-crossed books so
+        # downstream spreads never consume invalid bid/ask pairs.
+        result = result.loc[~crossed].copy()
+    return result.sort_values(['symbol']).reset_index(drop=True)

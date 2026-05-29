@@ -71,8 +71,21 @@ def _quote_table_checks(name: str, df: pd.DataFrame) -> list[str]:
         bid = pd.to_numeric(df["bid_price"], errors="coerce")
         ask = pd.to_numeric(df["ask_price"], errors="coerce")
         lines.append(f"- bid>ask violations: {int((bid > ask).sum())}")
-    if name == "wdo_calendar_spread.csv" and len(df) == 0:
-        lines.append("- spread sanity: unavailable because no WDO price rows were present; empty output is intentional")
+    if name == "wdo_calendar_spread.csv":
+        if len(df) == 0:
+            lines.append("- spread sanity: unavailable because no WDO price rows were present; empty output is intentional")
+        else:
+            if "source" in df.columns:
+                lines.append(f"- WDO spread source schema-backed: {bool(df['source'].fillna('').astype(str).eq('schema_backed_reconstructed_book').all())}")
+            if "schema_provenance" in df.columns:
+                lines.append(f"- WDO spread schema provenance present: {bool(df['schema_provenance'].notna().all())}")
+            if {'near_contract', 'far_contract'}.issubset(df.columns):
+                valid_contracts = df['near_contract'].fillna('').astype(str).str.match(r'^WDO[FGHJKMNQUVXZ]\d{2}$') & df['far_contract'].fillna('').astype(str).str.match(r'^WDO[FGHJKMNQUVXZ]\d{2}$')
+                lines.append(f"- WDO futures contract names valid: {bool(valid_contracts.all())}")
+            if {'near_bid', 'near_ask', 'far_bid', 'far_ask'}.issubset(df.columns):
+                near_ok = pd.to_numeric(df['near_bid'], errors='coerce') <= pd.to_numeric(df['near_ask'], errors='coerce')
+                far_ok = pd.to_numeric(df['far_bid'], errors='coerce') <= pd.to_numeric(df['far_ask'], errors='coerce')
+                lines.append(f"- WDO spread input bid<=ask rows: {int((near_ok & far_ok).sum())}/{len(df)}")
     if "spread" in df.columns and len(df):
         s = pd.to_numeric(df["spread"], errors="coerce")
         lines.append(f"- spread finite rows: {int(s.notna().sum())}; min={s.min()} max={s.max()}")

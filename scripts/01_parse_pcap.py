@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 import pandas as pd
 from quant_assignment.pcap_parser import parse_pcap_bytes
-from quant_assignment.b3_decoder import decode_b3_schema_backed, template_inventory
+from quant_assignment.b3_decoder import decode_b3_schema_backed, template_inventory, build_security_master
 from quant_assignment.order_book import build_snapshot_updates, reconstruct_book
 
 
@@ -50,6 +50,27 @@ def main():
 
     inv = template_inventory(packets)
     inv.to_csv(out / 'reports/b3_template_inventory.csv', index=False)
+
+    security_master = build_security_master(packets)
+    instruments = pd.DataFrame(security_master.values()).sort_values(['symbol', 'security_id']) if security_master else pd.DataFrame()
+    instruments.to_csv(out / 'reports/decoded_instruments.csv', index=False)
+    wdo_instruments = instruments[instruments['symbol'].fillna('').astype(str).str.match(r'^WDO[FGHJKMNQUVXZ]\d{2}$')] if not instruments.empty else pd.DataFrame()
+    wdo_instruments.to_csv(out / 'reports/wdo_instruments.csv', index=False)
+    protocol_note = [
+        '# B3 UMDF/SBE protocol provenance',
+        '',
+        '- Compatible public schema artifact: `b3-market-data-messages-2.2.0.xml` from `pedrosakuma/B3MarketDataPlatform`.',
+        '- Local PCAP frame match: `encoding=0xeb50`, `schemaId=2`, `version=15`.',
+        '- Observed SBE frame header: little-endian `<HHHHHH>` = `msgSize, encoding, blockLen, templateId, schemaId, version`.',
+        '- Packet envelope used by decoder: channel/feed flag/stream id/packet sequence/sending timestamp, then SBE frames from byte offset 16.',
+        '- Decoded templates: 12 SecurityDefinition, 30 SnapshotFullRefresh_Header, 50 Order_MBO, 51 DeleteOrder_MBO, 52 MassDeleteOrders_MBO, 71 SnapshotFullRefresh_Orders_MBO.',
+        f'- Template inventory rows: {len(inv)}.',
+        f'- Decoded instruments: {len(instruments)}.',
+        f'- Decoded WDO futures instruments: {len(wdo_instruments)}.',
+        '',
+        'Economic fields in CSV outputs are populated only by these schema-backed fixed offsets. Unknown templates remain diagnostic frame evidence and do not fabricate symbol/price/size/side/order fields.',
+    ]
+    (out / 'reports/b3_protocol_provenance.md').write_text('\n'.join(protocol_note) + '\n')
 
     decoded = decode_b3_schema_backed(packets)
     updates, snapshot = build_snapshot_updates(decoded)
