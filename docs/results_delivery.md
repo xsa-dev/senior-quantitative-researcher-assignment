@@ -86,4 +86,12 @@ The pipeline will regenerate the files under `outputs/` from local raw input dat
 
 ## Current upload status
 
-The repository is ready for Google Drive delivery, but this local Hermes session could not upload automatically because Google OAuth refresh currently fails with `invalid_grant: Bad Request`. Re-authenticate Google Workspace/Drive and then upload the generated `outputs/` bundle, or upload it manually through the browser.
+Uploaded to Google Drive:
+
+- Folder: `senior_quantitative_researcher_outputs_f6310ac`
+- Link: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
+- Sharing: anyone with the link can read
+- Uploaded files: 27 generated artifacts
+- Uploaded bytes: 2,713,239,741
+
+The Drive folder preserves the expected `outputs/` subdirectory structure: `csv/`, `intermediate/`, `plots/`, and `reports/`.

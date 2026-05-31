@@ -112,7 +112,8 @@ Validation checks:
 - The decoder intentionally supports only templates required for the assignment-critical path; other templates remain unhandled diagnostics until mapped.
 - Full production-grade B3 book reconciliation would additionally need complete exchange recovery/session-state rules, feed A/B reconciliation, auction-state handling, and all template mappings.
 - Gold arbitrage is a research prototype, not a production trading system.
-- Raw data and generated large outputs should be delivered via Google Drive, not committed to GitHub.
+- Raw input data is not committed to GitHub.
+- Generated large outputs are delivered through Google Drive: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
 
 ## Recommended wording for employer/interviewer
 "I first made the B3 PCAP boundary explicit, then resolved the critical blocker by integrating a compatible B3 UMDF/SBE schema and verifying it against the local PCAP frame headers. The final pipeline decodes real SecurityDefinition and MBO order events, builds a WDO instrument master, reconstructs non-crossed top-of-book rows, and computes a WDO calendar spread with schema provenance. Unknown templates remain diagnostic; I do not fabricate market fields."
