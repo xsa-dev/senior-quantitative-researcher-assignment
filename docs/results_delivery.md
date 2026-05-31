@@ -93,6 +93,6 @@ Uploaded to Google Drive:
 - Link: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
 - Sharing: anyone with the link can read
 - Uploaded files: 28 generated artifacts
-- Uploaded bytes: 2,727,171,453
+- Uploaded bytes: 2,741,623,249
 
 The Drive folder preserves the expected `outputs/` subdirectory structure: `csv/`, `intermediate/`, `plots/`, and `reports/`.
