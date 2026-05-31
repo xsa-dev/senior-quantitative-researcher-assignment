@@ -32,7 +32,31 @@ def main():
 
     s.to_csv(out / 'csv/wdo_calendar_spread.csv', index=False)
     if not s.empty:
-        line_plot(s, 'ts', 'spread', 'WDO Calendar Spread', out / 'plots/wdo_calendar_spread.png')
+        if len(s) == 1:
+            row = s.iloc[0]
+            fig, ax = plt.subplots(figsize=(10, 5))
+            color = '#c0392b' if row['spread'] < 0 else '#2471a3'
+            ax.bar([f"{row['near_contract']} - {row['far_contract']}"], [row['spread']], color=color, width=0.45)
+            ax.axhline(0, color='black', linewidth=0.8)
+            ax.set_title('WDO Calendar Spread — Single Schema-Backed Observation')
+            ax.set_ylabel('Near mid - far mid')
+            ax.text(
+                0.02, 0.95,
+                f"timestamp: {row['ts']}\n"
+                f"near: {row['near_contract']} bid/ask/mid = {row['near_bid']} / {row['near_ask']} / {row['near_mid']}\n"
+                f"far:  {row['far_contract']} bid/ask/mid = {row['far_bid']} / {row['far_ask']} / {row['far_mid']}\n"
+                f"spread: {row['spread']}\n"
+                "Only one aligned valid WDO pair was available after non-crossed book filtering.",
+                transform=ax.transAxes,
+                va='top',
+                ha='left',
+                bbox={'boxstyle': 'round', 'facecolor': 'white', 'alpha': 0.9},
+            )
+            fig.tight_layout()
+            fig.savefig(out / 'plots/wdo_calendar_spread.png')
+            plt.close(fig)
+        else:
+            line_plot(s, 'ts', 'spread', 'WDO Calendar Spread', out / 'plots/wdo_calendar_spread.png')
         note = (
             f"Rows: {len(s)}\n"
             f"Contracts: {s['near_contract'].iloc[0]} - {s['far_contract'].iloc[0]}\n"
@@ -41,6 +65,7 @@ def main():
             f"Far bid/ask/mid: {s['far_bid'].iloc[0]} / {s['far_ask'].iloc[0]} / {s['far_mid'].iloc[0]}\n"
             f"Spread: {s['spread'].iloc[0]}\n"
             "Spread uses only decoded real bid/ask/mid rows with positive prices and bid<=ask. Contract selection is calendar-sorted by WDO futures month code and aligned with merge_asof tolerance.\n"
+            "When only one aligned pair is available, the plot is rendered as an annotated single-observation bar instead of an empty-looking line chart.\n"
         )
     else:
         fig, ax = plt.subplots(figsize=(10, 4))
