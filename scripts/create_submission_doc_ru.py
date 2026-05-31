@@ -3,11 +3,14 @@ from __future__ import annotations
 
 import base64
 import html
+import os
+from io import BytesIO
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from PIL import Image
 
 REPO = Path(__file__).resolve().parents[1]
 TOKEN = Path.home() / ".hermes" / "google_token_drive_upload.json"
@@ -15,6 +18,8 @@ DRIVE_FOLDER_ID = "1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA"
 DRIVE_FOLDER_URL = f"https://drive.google.com/drive/folders/{DRIVE_FOLDER_ID}"
 GITHUB_URL = "https://github.com/xsa-dev/senior-quantitative-researcher-assignment"
 TITLE = "Senior Quantitative Researcher — документация к тестовому заданию"
+EXISTING_DOC_ID = "17FHnEeDEcN-3uFHe-J6tAI_y6y9su1lNTST3BWxSLX8"
+MAX_DOC_IMAGE_WIDTH_PX = 600
 
 # Links verified from the uploaded Google Drive artifact bundle.
 LINKS = {
@@ -47,10 +52,17 @@ def img(path: str, caption: str) -> str:
     link = a(path, LINKS[path])
     if not p.exists():
         return f"<p><b>{html.escape(caption)}:</b> {link}</p>"
-    data = base64.b64encode(p.read_bytes()).decode("ascii")
+    with Image.open(p) as im:
+        im = im.convert("RGB")
+        if im.width > MAX_DOC_IMAGE_WIDTH_PX:
+            ratio = MAX_DOC_IMAGE_WIDTH_PX / im.width
+            im = im.resize((MAX_DOC_IMAGE_WIDTH_PX, int(im.height * ratio)), Image.Resampling.LANCZOS)
+        buf = BytesIO()
+        im.save(buf, format="PNG", optimize=True)
+    data = base64.b64encode(buf.getvalue()).decode("ascii")
     return (
         f'<figure><img src="data:image/png;base64,{data}" '
-        f'style="max-width:720px;width:100%;height:auto" />'
+        f'width="{MAX_DOC_IMAGE_WIDTH_PX}" />'
         f'<figcaption>{html.escape(caption)} — {link}</figcaption></figure>'
     )
 
@@ -246,12 +258,22 @@ def upload_doc(html_path: Path) -> tuple[str, str]:
     creds = Credentials.from_authorized_user_file(str(TOKEN))
     drive = build("drive", "v3", credentials=creds)
     media = MediaFileUpload(str(html_path), mimetype="text/html", resumable=True)
-    meta = {
-        "name": TITLE,
-        "mimeType": "application/vnd.google-apps.document",
-        "parents": [DRIVE_FOLDER_ID],
-    }
-    created = drive.files().create(body=meta, media_body=media, fields="id, webViewLink", supportsAllDrives=True).execute()
+    existing_doc_id = os.environ.get("SUBMISSION_DOC_ID", EXISTING_DOC_ID)
+    if existing_doc_id:
+        created = drive.files().update(
+            fileId=existing_doc_id,
+            body={"name": TITLE, "mimeType": "application/vnd.google-apps.document"},
+            media_body=media,
+            fields="id, webViewLink",
+            supportsAllDrives=True,
+        ).execute()
+    else:
+        meta = {
+            "name": TITLE,
+            "mimeType": "application/vnd.google-apps.document",
+            "parents": [DRIVE_FOLDER_ID],
+        }
+        created = drive.files().create(body=meta, media_body=media, fields="id, webViewLink", supportsAllDrives=True).execute()
     drive.permissions().create(
         fileId=created["id"],
         body={"type": "anyone", "role": "reader"},
