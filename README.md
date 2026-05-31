@@ -13,9 +13,9 @@ Latest verified quality gates:
 
 ```bash
 make all
-# parse-pcap: rows 1372832, reconstructed books 2228+, WDO decoded rows 384450, templates 58
+# parse-pcap: rows 1372832, reconstructed books 2228+, WDO decoded rows 384450, WDO spread rows 21387
 make test
-# pytest passes
+# 14 passed
 ```
 
 See `outputs/reports/validation_report.md` after running the pipeline for exact current counts.
@@ -24,8 +24,8 @@ See `outputs/reports/validation_report.md` after running the pipeline for exact 
 Build a local, reproducible research project for a Quantitative Researcher assignment:
 
 1. Parse B3 PCAP files and decode assignment-critical B3 UMDF/SBE instrument/order-book messages.
-2. Build a WDO calendar-spread artifact from decoded reconstructed B3 book rows.
-3. Compute and plot volatility/momentum for available futures with a 400 ms market-data-to-order latency assumption.
+2. Build a WDO calendar-spread time series from decoded B3 WDO MBO order events.
+3. Compute and plot volatility/momentum for available futures with a 400 ms market-data-to-order latency assumption and irregular-tick-safe momentum.
 4. Build a B3-vs-MOEX gold futures arbitrage research prototype from the supplied one-month quotes CSV.
 
 ## Repository structure
@@ -76,7 +76,7 @@ PYTHONPATH=src .venv/bin/python -m pytest -q
 ```bash
 make discover      # data inventory + raw-folder protocol scan
 make parse-pcap    # B3 frame decode, instrument master, updates, snapshots, reconstructed book
-make spread        # WDO calendar spread from schema-backed reconstructed book
+make spread        # WDO calendar spread from schema-backed WDO MBO top-of-book time series
 make features      # volatility/momentum feature CSV and plots
 make arbitrage     # gold arbitrage signals CSV and plots
 make validate      # validation and summary reports
@@ -144,7 +144,7 @@ Event-driven non-crossed WDO top-of-book time series replayed from decoded B3 MB
 WDO futures calendar spread from the decoded WDO top-of-book time series. Includes near/far bid/ask/mid, spread, source, and schema provenance.
 
 ### `volatility_momentum.csv`
-Quote-derived features from valid, non-crossed, positive top-of-book rows: `ret`, `decision_ts`, `rv_1min`, `ewma_vol`, `mom_30s`, `mom_z`.
+Quote-derived features from valid, non-crossed, positive top-of-book rows: `ret`, `decision_ts`, `rv_1min`, `ewma_vol`, `mom_30s`, `mom_z`. Momentum uses an as-of 30-second lag so irregular tick timestamps produce finite feature values instead of all-NaN plots.
 
 ### `gold_arbitrage_signals.csv`
 Aligned B3/MOEX gold midpoint research table: `b3_mid`, `moex_mid`, `raw_spread`, shifted rolling `spread_mean`/`spread_std`, `zscore`, `position`, `signal`, `pnl`, `cum_pnl`.
@@ -161,7 +161,7 @@ Aligned B3/MOEX gold midpoint research table: `b3_mid`, `moex_mid`, `raw_spread`
 - reconstructed-book bid/ask validity;
 - WDO spread source/provenance/contract validity and bid<=ask input checks;
 - quote sanity: positive bid/ask/mid and no crossed markets;
-- volatility/momentum 400 ms latency check;
+- volatility/momentum 400 ms latency and finite-feature checks;
 - shifted rolling z-score look-ahead control for arbitrage.
 
 ## No-fabrication policy

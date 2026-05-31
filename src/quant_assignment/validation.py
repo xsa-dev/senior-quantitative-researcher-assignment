@@ -92,6 +92,10 @@ def _quote_table_checks(name: str, df: pd.DataFrame) -> list[str]:
         s = pd.to_numeric(df["spread"], errors="coerce")
         lines.append(f"- spread finite rows: {int(s.notna().sum())}; min={s.min()} max={s.max()}")
     if name == "volatility_momentum.csv":
+        for col, label in [("mom_z", "momentum"), ("rv_1min", "realized volatility"), ("ewma_vol", "EWMA volatility")]:
+            if col in df.columns:
+                finite = pd.to_numeric(df[col], errors="coerce").notna().sum()
+                lines.append(f"- {label} finite rows: {int(finite)}/{len(df)}")
         if {"ts", "decision_ts"}.issubset(df.columns):
             ts = pd.to_datetime(df["ts"], errors="coerce")
             ds = pd.to_datetime(df["decision_ts"], errors="coerce")

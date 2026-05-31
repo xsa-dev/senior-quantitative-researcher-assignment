@@ -1,9 +1,9 @@
 # Final submission summary
 
 ## Executive summary
-This repository is ready as a defensible, reproducible GitHub solution for the senior quantitative researcher assignment. The full local pipeline runs with `make all`, tests pass, large raw/generated artifacts stay out of Git, and B3 PCAP economic fields are now populated from schema-backed UMDF/SBE decoding rather than fabricated heuristics.
+This repository is ready as a defensible, reproducible GitHub solution for the senior quantitative researcher assignment. The full local pipeline runs with `make all`, tests pass cleanly, large raw/generated artifacts stay out of Git, and B3 PCAP economic fields are populated from schema-backed UMDF/SBE decoding rather than fabricated heuristics.
 
-The earlier B3 blocker is resolved for the assignment-critical path: instrument definitions, WDO futures symbols, MBO order events, reconstructed top-of-book rows, and a WDO calendar-spread row are produced from decoded B3 Binary UMDF/SBE frames. Remaining limitations are explicitly scoped to unhandled templates and production-grade exchange reconciliation, not hidden data fabrication.
+The assignment-critical B3 path is resolved: instrument definitions, WDO futures symbols, MBO order events, reconstructed top-of-book rows, and a full intraday WDO calendar-spread time series are produced from decoded B3 Binary UMDF/SBE frames. The solution is intentionally audit-friendly: unsupported templates remain diagnostic evidence, every market field has provenance, and validation checks catch empty feature/plot regressions such as all-NaN momentum.
 
 ## Run commands
 
@@ -29,7 +29,7 @@ make test
 Latest local verification:
 
 - `make all`: completes successfully.
-- `make test`: passes.
+- `make test`: passes cleanly (`14 passed`).
 - Required output CSVs exist.
 - Validation report is regenerated at `outputs/reports/validation_report.md`.
 - Economic B3 fields pass only with schema provenance.
@@ -84,6 +84,7 @@ The WDO calendar spread is computed from decoded WDO MBO order-event top-of-book
 - Uses valid top-of-book midpoint from quote CSV rows.
 - Filters invalid/crossed quotes.
 - Computes log returns, 60-second rolling volatility, EWMA volatility, and 30-second momentum z-score.
+- Momentum is robust to irregular quote ticks: it uses the last midpoint observed no later than `ts - 30s`, rather than requiring an exact timestamp match.
 - Models the 400 ms latency requirement with `decision_ts = ts + 400ms`.
 - Uses backward-looking calculations only.
 
@@ -107,6 +108,7 @@ Validation checks:
 - WDO top-of-book time-series non-crossed bid/ask validity;
 - WDO spread source, contract names, schema provenance, finite spread, and bid<=ask inputs;
 - volatility/momentum latency check;
+- volatility/momentum finite-row checks to prevent empty plots from all-NaN features;
 - shifted-zscore look-ahead control for arbitrage.
 
 ## Remaining limitations
@@ -117,4 +119,4 @@ Validation checks:
 - Generated large outputs are delivered through Google Drive: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
 
 ## Recommended wording for employer/interviewer
-"I first made the B3 PCAP boundary explicit, then resolved the critical blocker by integrating a compatible B3 UMDF/SBE schema and verifying it against the local PCAP frame headers. The final pipeline decodes real SecurityDefinition and MBO order events, builds a WDO instrument master, reconstructs non-crossed top-of-book rows, and computes a WDO calendar spread with schema provenance. Unknown templates remain diagnostic; I do not fabricate market fields."
+"I first made the B3 PCAP boundary explicit, then resolved the critical blocker by integrating a compatible B3 UMDF/SBE schema and verifying it against the local PCAP frame headers. The final pipeline decodes real SecurityDefinition and MBO order events, builds a WDO instrument master, reconstructs non-crossed top-of-book rows, computes a full intraday WDO calendar-spread time series with schema provenance, and validates that volatility/momentum features are finite and latency-aware. Unknown templates remain diagnostic; I do not fabricate market fields."

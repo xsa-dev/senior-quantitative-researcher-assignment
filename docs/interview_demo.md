@@ -12,7 +12,7 @@ Expected result:
 
 ```text
 make all completes
-pytest: 5 passed
+pytest: 14 passed
 ```
 
 If the virtual environment already exists, the quick replay is simply:
@@ -25,16 +25,16 @@ make all
 
 1. Open `README.md`.
    - Show assignment mapping table.
-   - State that the solution is runnable and honest about blocked B3 economic decoding.
+   - State that the solution is runnable, schema-backed for assignment-critical B3 economic fields, and explicit about remaining production limitations.
 2. Open `outputs/reports/protocol_artifact_scan.md`.
    - Show that raw data was re-checked for XML/SBE/template/schema/dictionary/metadata artifacts.
    - Point out: schema/template/XML/SBE files found = 0.
 3. Open `outputs/intermediate/packet_metadata.csv`.
    - Show real packet evidence: timestamps, source/destination, ports, payload lengths, payload hashes.
 4. Open `outputs/csv/updates.csv`.
-   - Show `decode_status`, envelope candidates, payload hash/hex evidence, and intentionally blank economic fields.
+   - Show schema-backed `decode_status`, `symbol`, `side`, `price`, `size`, `order_id`, template/frame metadata, and provenance.
 5. Open `outputs/csv/reconstructed_book.csv`.
-   - Show explicit `not_reconstructed`, not a fake bid/ask book.
+   - Show non-crossed reconstructed top-of-book rows where decoded event data is sufficient, and diagnostic rows where full reconstruction is intentionally not claimed.
 6. Open `outputs/csv/wdo_top_of_book_timeseries.csv`, `outputs/csv/wdo_calendar_spread.csv`, and `outputs/plots/wdo_calendar_spread.png`.
    - Show decoded event-driven WDO top-of-book replay and the intraday `WDOG26-WDOH26` spread series.
 7. Open `outputs/csv/volatility_momentum.csv` and plots.
@@ -63,15 +63,15 @@ make all
 
 ## 4. What to say about PCAP parsing
 
-"I separated generic PCAP parsing from B3 economic decoding. The parser reads the captures and emits real packet evidence: timestamps, IP/port metadata, payload sizes, hashes, and payload byte heads. I also record conservative Instrument-payload token evidence, but I do not use it as canonical symbol data. The missing piece is the official B3 UMDF/SBE schema/template and instrument/price-scale/action metadata. Without those, assigning symbol/price/size/side would be fabrication, so the outputs are explicitly marked partial."
+"I separated generic PCAP parsing from B3 economic decoding. The parser reads the captures and emits real packet evidence: timestamps, IP/port metadata, payload sizes, hashes, and payload byte heads. For the assignment-critical economic layer I use a compatible B3 Binary UMDF/SBE schema, verify the frame header against the local PCAPs, and only then populate canonical symbol/side/price/size/order fields with schema provenance. Unsupported templates remain diagnostic evidence instead of guessed data."
 
-## 5. What to say about the B3 blocker
+## 5. What to say about remaining B3 limitations
 
-"The blocker is external and precise. I need the B3 UMDF/SBE XML schema/templates, template ID mapping, instrument dictionary/security definitions, price decimal metadata, and snapshot/incremental semantics. The repository has a clean integration point in `b3_decoder.py`; once those files are available, the parser can move from packet evidence to template-level economic events."
+"The implemented decoder covers the templates needed for instrument definitions, WDO MBO order events, snapshots, deletes, and the assignment outputs. A production-grade B3 handler would still need complete template coverage, exchange session/recovery rules, auction states, and feed A/B reconciliation. I keep that boundary explicit rather than over-claiming."
 
 ## 6. What to say about no fabricated data
 
-"I chose defensible engineering over pretending. There are no fake B3 prices, no fake book levels, no synthetic WDO spread, and no invented template IDs. Unknown fields are null, and each blocked artifact includes `decode_status` and explanatory notes."
+"I chose defensible engineering over pretending. Canonical B3 prices, book levels, WDO spreads, and feature tables are emitted only from decoded schema-backed data or from the supplied quote CSV. Unknown templates stay diagnostic, and validation checks assert provenance plus sanity conditions."
 
 ## 7. What to say about WDO spread
 
@@ -79,7 +79,7 @@ make all
 
 ## 8. What to say about volatility/momentum and 400 ms latency
 
-"Features are calculated only from information available at or before each quote timestamp. The output includes `decision_ts = ts + 400ms` to make the assumed market-data-to-order latency explicit. This is a research feature table, not a queue-position simulator."
+"Features are calculated only from information available at or before each quote timestamp. The output includes `decision_ts = ts + 400ms` to make the assumed market-data-to-order latency explicit. Momentum is computed with an as-of 30-second lag, which is robust to irregular tick timestamps and prevents empty all-NaN momentum plots. This is a research feature table, not a queue-position simulator."
 
 ## 9. What to say about gold arbitrage
 
@@ -87,14 +87,11 @@ make all
 
 ## 10. Likely interviewer questions and concise answers
 
-Q: Why didn't you decode B3 prices from the PCAPs?
-A: Because the official B3 UMDF/SBE templates, template IDs, instrument dictionary, and price scales are not in the provided data. Decoding prices without those would be guessing.
+Q: Why did you use a compatible public B3 schema instead of hand-decoding bytes?
+A: Because prices, sides, sizes, order actions and price scales need template-backed semantics. I verify the SBE frame header against the local captures, then populate economic fields only where schema-backed decoding applies. Unsupported templates remain diagnostic.
 
-Q: Did you find anything useful in Instrument PCAPs?
-A: Yes, visible ASCII token evidence appears in Instrument payloads. I preserve it as `symbol_candidates_evidence`, but I do not treat it as canonical mapping without schema offsets and field semantics.
-
-Q: Why is the reconstructed book empty/blocked?
-A: A book requires trustworthy symbol, side, price, size, action, and sequence semantics. Those are unavailable without the B3 artifacts, so the output explicitly says `not_reconstructed`.
+Q: Why isn't the book builder production-grade?
+A: The assignment needs defensible decoded artifacts and research features. Full production B3 book handling would add complete template coverage, session/recovery state, auction handling and feed reconciliation. I explicitly document that boundary.
 
 Q: Is the repository still useful?
-A: Yes. It is reproducible, validates the provided quote research tasks, preserves PCAP evidence for future decoding, and clearly documents the exact artifacts needed to complete full B3 decoding.
+A: Yes. It is reproducible, decodes assignment-critical B3 fields with provenance, computes a real WDO calendar-spread time series, validates quote research tasks, and documents exact limitations.
