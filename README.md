@@ -1,5 +1,11 @@
 # Quantitative Researcher Assignment Solution
 
+## Submission links
+
+- GitHub repository: https://github.com/xsa-dev/senior-quantitative-researcher-assignment
+- Russian documentation Google Doc: https://docs.google.com/document/d/17FHnEeDEcN-3uFHe-J6tAI_y6y9su1lNTST3BWxSLX8/edit?usp=drivesdk
+- Google Drive result artifacts: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
+
 ## Interviewer-facing status
 This repository is ready to share as an honest, reproducible GitHub solution. It runs locally with `make all`, maps each assignment task to concrete artifacts, and now includes schema-backed B3 Binary UMDF/SBE economic decoding for the assignment-critical path.
 
