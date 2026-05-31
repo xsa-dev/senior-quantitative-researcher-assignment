@@ -3,7 +3,7 @@
 ## 1. Fresh run commands
 
 ```bash
-cd /Users/alxy/Desktop/1PROJ/senior_quantitative_researcher
+cd senior-quantitative-researcher-assignment
 make install
 make all
 ```

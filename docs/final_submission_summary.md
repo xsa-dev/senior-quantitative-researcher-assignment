@@ -8,7 +8,7 @@ The assignment-critical B3 path is resolved: instrument definitions, WDO futures
 ## Run commands
 
 ```bash
-cd /Users/alxy/Desktop/1PROJ/senior_quantitative_researcher
+cd senior-quantitative-researcher-assignment
 make install
 make all
 ```

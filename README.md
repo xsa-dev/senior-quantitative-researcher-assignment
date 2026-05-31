@@ -47,7 +47,7 @@ Generated result artifacts are deliberately excluded from GitHub because several
 ## Installation
 
 ```bash
-cd /Users/alxy/Desktop/1PROJ/senior_quantitative_researcher
+cd senior-quantitative-researcher-assignment
 make install
 ```
 
