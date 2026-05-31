@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import pandas as pd
-from quant_assignment.spreads import load_quotes, normalize_book_quotes, build_wdo_spread
+from quant_assignment.spreads import load_quotes, normalize_book_quotes, build_wdo_spread, build_wdo_top_of_book_timeseries
 from quant_assignment.plotting import line_plot
 import matplotlib.pyplot as plt
 
@@ -22,6 +22,16 @@ def main():
     source = 'quotes_csv'
     df = load_quotes(str(quote_path)) if quote_path.exists() else pd.DataFrame()
     s = build_wdo_spread(df) if not df.empty else pd.DataFrame()
+    wdo_book_ts = pd.DataFrame()
+
+    if s.empty:
+        events_path = out / 'reports/wdo_decoded_evidence.csv'
+        if events_path.exists():
+            events = pd.read_csv(events_path, low_memory=False)
+            wdo_book_ts = build_wdo_top_of_book_timeseries(events, contracts=('WDOG26', 'WDOH26'))
+            wdo_book_ts.to_csv(out / 'csv/wdo_top_of_book_timeseries.csv', index=False)
+            s = build_wdo_spread(wdo_book_ts, source='schema_backed_wdo_mbo_timeseries')
+            source = 'schema_backed_wdo_mbo_timeseries'
 
     if s.empty:
         book_path = out / 'csv/reconstructed_book.csv'
@@ -57,15 +67,17 @@ def main():
             plt.close(fig)
         else:
             line_plot(s, 'ts', 'spread', 'WDO Calendar Spread', out / 'plots/wdo_calendar_spread.png')
+        top_rows = len(wdo_book_ts)
         note = (
             f"Rows: {len(s)}\n"
             f"Contracts: {s['near_contract'].iloc[0]} - {s['far_contract'].iloc[0]}\n"
             f"Source: {source}\n"
-            f"Near bid/ask/mid: {s['near_bid'].iloc[0]} / {s['near_ask'].iloc[0]} / {s['near_mid'].iloc[0]}\n"
-            f"Far bid/ask/mid: {s['far_bid'].iloc[0]} / {s['far_ask'].iloc[0]} / {s['far_mid'].iloc[0]}\n"
-            f"Spread: {s['spread'].iloc[0]}\n"
+            f"WDO top-of-book time-series rows: {top_rows}\n"
+            f"Near bid/ask/mid first row: {s['near_bid'].iloc[0]} / {s['near_ask'].iloc[0]} / {s['near_mid'].iloc[0]}\n"
+            f"Far bid/ask/mid first row: {s['far_bid'].iloc[0]} / {s['far_ask'].iloc[0]} / {s['far_mid'].iloc[0]}\n"
+            f"First spread: {s['spread'].iloc[0]}\n"
             "Spread uses only decoded real bid/ask/mid rows with positive prices and bid<=ask. Contract selection is calendar-sorted by WDO futures month code and aligned with merge_asof tolerance.\n"
-            "When only one aligned pair is available, the plot is rendered as an annotated single-observation bar instead of an empty-looking line chart.\n"
+            "When `source=schema_backed_wdo_mbo_timeseries`, Task 2 uses event-driven decoded WDO MBO top-of-book rows rather than a single final reconstructed-book snapshot.\n"
         )
     else:
         fig, ax = plt.subplots(figsize=(10, 4))
@@ -79,7 +91,7 @@ def main():
     Path('docs/task_2_wdo_calendar_spread.md').write_text(
         "# Task 2 WDO calendar spread\n\n"
         + note
-        + "\nThe pipeline emits `outputs/csv/wdo_calendar_spread.csv` and `outputs/plots/wdo_calendar_spread.png`. When the source is `schema_backed_reconstructed_book`, the values come from decoded B3 UMDF/SBE MBO book fields rather than the non-WDO quote CSV.\n"
+        + "\nThe pipeline emits `outputs/csv/wdo_top_of_book_timeseries.csv`, `outputs/csv/wdo_calendar_spread.csv`, and `outputs/plots/wdo_calendar_spread.png`. When the source is `schema_backed_wdo_mbo_timeseries`, the values come from event-driven decoded B3 UMDF/SBE WDO MBO book fields rather than the non-WDO quote CSV or a single final book snapshot.\n"
     )
 
 

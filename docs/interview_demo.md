@@ -35,8 +35,8 @@ make all
    - Show `decode_status`, envelope candidates, payload hash/hex evidence, and intentionally blank economic fields.
 5. Open `outputs/csv/reconstructed_book.csv`.
    - Show explicit `not_reconstructed`, not a fake bid/ask book.
-6. Open `outputs/csv/wdo_calendar_spread.csv` and `outputs/plots/wdo_calendar_spread.png`.
-   - Explain WDO unavailability without fabricated prices.
+6. Open `outputs/csv/wdo_top_of_book_timeseries.csv`, `outputs/csv/wdo_calendar_spread.csv`, and `outputs/plots/wdo_calendar_spread.png`.
+   - Show decoded event-driven WDO top-of-book replay and the intraday `WDOG26-WDOH26` spread series.
 7. Open `outputs/csv/volatility_momentum.csv` and plots.
    - Show `decision_ts = ts + 400ms` and backward-looking features.
 8. Open `outputs/csv/gold_arbitrage_signals.csv` and plots.
@@ -75,7 +75,7 @@ make all
 
 ## 7. What to say about WDO spread
 
-"The assignment asks for a WDO calendar spread. The supplied quote CSV contains GLDG26 and GOLD-3.26 style symbols, not WDO quote rows. Instrument PCAPs contain WDO-like token evidence, but not decoded prices. Therefore `wdo_calendar_spread.csv` is intentionally empty and the plot is a diagnostic. With WDO quotes or a full B3 decoder, the spread module is ready to align near/far contracts and compute the spread."
+"Task 2 now uses schema-backed B3 WDO MBO order events. I replay decoded order IDs for the selected adjacent contracts WDOG26 and WDOH26 into a non-crossed top-of-book time series, then align the two contracts with merge_asof to compute an intraday calendar spread. The latest run produces 38,772 WDO top-of-book rows and 21,387 aligned spread rows, with no fabricated prices and explicit schema provenance. WDOF26 is decoded too, but its final local replay state is crossed without full production session/feed reconciliation, so I selected the adjacent pair with clean two-sided flow for a defensible spread series."
 
 ## 8. What to say about volatility/momentum and 400 ms latency
 

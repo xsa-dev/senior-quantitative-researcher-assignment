@@ -6,6 +6,7 @@ REQUIRED_OUTPUTS = [
     "updates.csv",
     "snapshot.csv",
     "reconstructed_book.csv",
+    "wdo_top_of_book_timeseries.csv",
     "wdo_calendar_spread.csv",
     "volatility_momentum.csv",
     "gold_arbitrage_signals.csv",
@@ -76,7 +77,8 @@ def _quote_table_checks(name: str, df: pd.DataFrame) -> list[str]:
             lines.append("- spread sanity: unavailable because no WDO price rows were present; empty output is intentional")
         else:
             if "source" in df.columns:
-                lines.append(f"- WDO spread source schema-backed: {bool(df['source'].fillna('').astype(str).eq('schema_backed_reconstructed_book').all())}")
+                schema_sources = {'schema_backed_reconstructed_book', 'schema_backed_wdo_mbo_timeseries'}
+                lines.append(f"- WDO spread source schema-backed: {bool(df['source'].fillna('').astype(str).isin(schema_sources).all())}")
             if "schema_provenance" in df.columns:
                 lines.append(f"- WDO spread schema provenance present: {bool(df['schema_provenance'].notna().all())}")
             if {'near_contract', 'far_contract'}.issubset(df.columns):

@@ -33,7 +33,7 @@ Latest local verification:
 - Required output CSVs exist.
 - Validation report is regenerated at `outputs/reports/validation_report.md`.
 - Economic B3 fields pass only with schema provenance.
-- WDO spread source is `schema_backed_reconstructed_book`.
+- WDO spread source is `schema_backed_wdo_mbo_timeseries`.
 - Heavy `documents/` and generated `outputs/` artifacts remain ignored by Git except `.gitkeep` skeletons.
 
 ## Assignment mapping
@@ -45,8 +45,8 @@ Latest local verification:
   - Outputs: `packet_metadata.csv`, `updates.csv`, `increment_updates.csv`, `snapshot.csv`, `reconstructed_book.csv`, `b3_template_inventory.csv`, `decoded_instruments.csv`, `wdo_instruments.csv`, `wdo_decoded_evidence.csv`.
   - Status: schema-backed decode complete for assignment-critical templates.
 - WDO calendar spread: `scripts/02_build_wdo_calendar_spread.py`, `spreads.py`
-  - Outputs: `outputs/csv/wdo_calendar_spread.csv`, `outputs/plots/wdo_calendar_spread.png`.
-  - Status: computed from decoded B3 reconstructed book.
+  - Outputs: `outputs/csv/wdo_top_of_book_timeseries.csv`, `outputs/csv/wdo_calendar_spread.csv`, `outputs/plots/wdo_calendar_spread.png`.
+  - Status: computed from decoded B3 WDO MBO order-event time series.
 - Volatility/momentum: `scripts/03_compute_vol_momentum.py`, `features.py`
   - Outputs: `volatility_momentum.csv`, `volatility.png`, `momentum.png`.
   - Status: complete for valid quote rows with explicit 400 ms latency.
@@ -78,7 +78,7 @@ Unknown templates remain diagnostic frame evidence and do not populate canonical
 ## Quant methodology summary
 
 ### WDO spread
-The WDO calendar spread is computed from reconstructed B3 top-of-book rows, not from the non-WDO quote CSV. Contracts are calendar-sorted by WDO month code, rows are filtered to positive non-crossed bid/ask pairs, and near/far books are aligned with a documented `merge_asof` tolerance. The output includes source and schema provenance.
+The WDO calendar spread is computed from decoded WDO MBO order-event top-of-book time series, not from the non-WDO quote CSV or a single final book snapshot. The selected contracts (`WDOG26` and `WDOH26`) are adjacent WDO futures with sufficient valid two-sided decoded flow. Rows are filtered to positive non-crossed bid/ask pairs, and near/far books are aligned with a documented `merge_asof` tolerance. The output includes source and schema provenance.
 
 ### Volatility/momentum
 - Uses valid top-of-book midpoint from quote CSV rows.
@@ -104,6 +104,7 @@ Validation checks:
 - B3 decode-status distribution;
 - economic fields populated only with schema provenance;
 - reconstructed-book bid/ask validity;
+- WDO top-of-book time-series non-crossed bid/ask validity;
 - WDO spread source, contract names, schema provenance, finite spread, and bid<=ask inputs;
 - volatility/momentum latency check;
 - shifted-zscore look-ahead control for arbitrage.

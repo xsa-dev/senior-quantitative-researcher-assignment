@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import defaultdict
 import re
 import pandas as pd
 
@@ -66,7 +67,81 @@ def normalize_book_quotes(book: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def build_wdo_spread(df: pd.DataFrame, tolerance: pd.Timedelta | str = pd.Timedelta('5s')) -> pd.DataFrame:
+def build_wdo_top_of_book_timeseries(
+    events: pd.DataFrame,
+    contracts: tuple[str, ...] = ('WDOG26', 'WDOH26'),
+) -> pd.DataFrame:
+    """Replay decoded WDO MBO order events into a non-crossed top-of-book time series.
+
+    This intentionally consumes only schema-backed decoded order fields. It emits a
+    row after each event for which the contract has a positive, non-crossed two-sided
+    book. Prices, sizes, and order IDs come directly from decoded B3 UMDF/SBE rows.
+    """
+    cols = [
+        'ts', 'symbol', 'bid_price', 'bid_qty', 'ask_price', 'ask_qty',
+        'mid', 'book_spread', 'book_depth_available', 'source', 'schema_provenance'
+    ]
+    if events.empty:
+        return pd.DataFrame(columns=cols)
+    needed = {'timestamp', 'symbol', 'message_type', 'side', 'price', 'size', 'action', 'order_id'}
+    if not needed.issubset(events.columns):
+        return pd.DataFrame(columns=cols)
+
+    df = events.copy()
+    df = df[df['symbol'].astype(str).isin(contracts)]
+    df = df[df['message_type'].isin(['Order_MBO', 'DeleteOrder_MBO'])]
+    df = df[df['side'].isin(['bid', 'ask']) & df['order_id'].notna()]
+    if df.empty:
+        return pd.DataFrame(columns=cols)
+    df['ts'] = pd.to_datetime(df['timestamp'], errors='coerce', utc=True)
+    df['price'] = pd.to_numeric(df['price'], errors='coerce')
+    df['size'] = pd.to_numeric(df['size'], errors='coerce')
+    sort_cols = [c for c in ['ts', 'packet_index', 'rpt_seq'] if c in df.columns]
+    df = df.dropna(subset=['ts']).sort_values(sort_cols or ['ts'])
+
+    books: dict[str, dict[object, dict[str, float | str]]] = defaultdict(dict)
+    rows: list[dict[str, object]] = []
+    for r in df.itertuples(index=False):
+        symbol = str(r.symbol)
+        book = books[symbol]
+        order_id = r.order_id
+        action = str(getattr(r, 'action', '')).lower()
+        message_type = str(getattr(r, 'message_type', ''))
+        if message_type == 'DeleteOrder_MBO' or action.startswith('delete'):
+            book.pop(order_id, None)
+        elif message_type == 'Order_MBO' and pd.notna(r.price) and pd.notna(r.size):
+            size = float(r.size)
+            if size > 0:
+                book[order_id] = {'side': str(r.side), 'price': float(r.price), 'size': size}
+            else:
+                book.pop(order_id, None)
+
+        active = [o for o in book.values() if float(o.get('size', 0) or 0) > 0]
+        bids = [o for o in active if o.get('side') == 'bid']
+        asks = [o for o in active if o.get('side') == 'ask']
+        bid = max((float(o['price']) for o in bids), default=None)
+        ask = min((float(o['price']) for o in asks), default=None)
+        if bid is None or ask is None or bid <= 0 or ask <= 0 or bid > ask:
+            continue
+        bid_qty = sum(float(o['size']) for o in bids if float(o['price']) == bid)
+        ask_qty = sum(float(o['size']) for o in asks if float(o['price']) == ask)
+        rows.append({
+            'ts': r.ts,
+            'symbol': symbol,
+            'bid_price': bid,
+            'bid_qty': bid_qty,
+            'ask_price': ask,
+            'ask_qty': ask_qty,
+            'mid': (bid + ask) / 2,
+            'book_spread': ask - bid,
+            'book_depth_available': len(active),
+            'source': 'schema_backed_wdo_mbo_timeseries',
+            'schema_provenance': 'B3 UMDF/SBE decoded WDO MBO order-event replay; rows emitted only for positive non-crossed two-sided books',
+        })
+    return pd.DataFrame(rows, columns=cols).drop_duplicates().reset_index(drop=True)
+
+
+def build_wdo_spread(df: pd.DataFrame, tolerance: pd.Timedelta | str = pd.Timedelta('5s'), source: str = 'schema_backed_reconstructed_book') -> pd.DataFrame:
     columns = [
         'ts', 'spread', 'near_contract', 'far_contract',
         'near_bid', 'near_ask', 'near_mid', 'far_bid', 'far_ask', 'far_mid',
@@ -94,6 +169,6 @@ def build_wdo_spread(df: pd.DataFrame, tolerance: pd.Timedelta | str = pd.Timede
     m['spread'] = m['near_mid'] - m['far_mid']
     m['near_contract'] = s1
     m['far_contract'] = s2
-    m['source'] = 'schema_backed_reconstructed_book'
-    m['schema_provenance'] = 'B3 UMDF/SBE decoded MBO top-of-book; bid/ask rows filtered for bid<=ask before calendar-spread alignment'
-    return m[columns]
+    m['source'] = source
+    m['schema_provenance'] = 'B3 UMDF/SBE decoded MBO top-of-book time series; bid/ask rows filtered for bid<=ask before calendar-spread alignment' if source == 'schema_backed_wdo_mbo_timeseries' else 'B3 UMDF/SBE decoded MBO top-of-book; bid/ask rows filtered for bid<=ask before calendar-spread alignment'
+    return m[columns].drop_duplicates().reset_index(drop=True)

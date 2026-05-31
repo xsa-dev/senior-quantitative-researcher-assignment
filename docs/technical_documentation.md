@@ -5,7 +5,7 @@
 ```text
 scripts/00_discover_data.py              raw inventory + protocol-artifact scan
 scripts/01_parse_pcap.py                 PCAP packet extraction + honest partial decoder
-scripts/02_build_wdo_calendar_spread.py  WDO spread artifact/diagnostic
+scripts/02_build_wdo_calendar_spread.py  WDO top-of-book replay + calendar spread
 scripts/03_compute_vol_momentum.py       volatility and momentum research features
 scripts/04_gold_arbitrage_research.py    B3/MOEX gold arbitrage prototype
 src/quant_assignment/pcap_parser.py      dpkt packet reader
@@ -29,10 +29,11 @@ src/quant_assignment/validation.py       output validation/reporting
    - extracts only payload-visible envelope candidates;
    - writes `updates.csv`, `snapshot.csv`, `reconstructed_book.csv`.
 3. `make spread`
-   - loads quote CSV;
-   - filters invalid/crossed quotes;
-   - emits WDO spread if at least two WDO contracts exist;
-   - otherwise emits an empty CSV plus diagnostic plot/note.
+   - first checks whether the auxiliary quote CSV contains WDO futures;
+   - if not, replays schema-backed decoded WDO MBO order events for `WDOG26`/`WDOH26` into `wdo_top_of_book_timeseries.csv`;
+   - filters to positive non-crossed two-sided books;
+   - aligns near/far WDO top-of-book rows with bounded `merge_asof` tolerance;
+   - writes `wdo_calendar_spread.csv` and `wdo_calendar_spread.png`.
 4. `make features`
    - computes midpoint returns, rolling realized volatility, EWMA volatility, 30-second momentum, and momentum z-score;
    - adds `decision_ts = ts + 400ms`.
@@ -45,16 +46,19 @@ src/quant_assignment/validation.py       output validation/reporting
 
 ## B3 PCAP decoder design
 
-The decoder intentionally has two layers:
+The decoder has two layers:
 
 - packet/parser layer: real and complete for generic PCAP metadata;
-- economic decoder layer: blocked until B3 schema artifacts are provided.
+- economic decoder layer: schema-backed for the assignment-critical B3 UMDF/SBE templates and conservative/diagnostic for still-unmapped templates.
 
-Current `decode_status` values:
+Current schema-backed `decode_status` values include:
 
-- `partial_packet_header`: payload exists; only envelope candidates were extracted.
-- `instrument_payload_unmapped`: Instrument PCAP payload with evidence tokens but no schema-backed interpretation.
-- `not_reconstructed`: book reconstruction blocked because canonical economic fields are unavailable.
+- `schema_backed_instrument_definition`;
+- `schema_backed_snapshot_header`;
+- `schema_backed_order_mbo`;
+- `schema_backed_delete_order_mbo`;
+- `schema_backed_snapshot_order_mbo`;
+- `schema_backed_frame_unhandled` for templates that are framed but intentionally not mapped to canonical economic fields.
 
 When official artifacts are provided, add a schema-backed decoder in `b3_decoder.py` that:
 
@@ -69,8 +73,9 @@ When official artifacts are provided, add a schema-backed decoder in `b3_decoder
 ## Quote and spread methods
 
 - The quote loader drops rows with invalid timestamps/symbols, non-positive bid/ask, and crossed top-of-book quotes.
-- WDO spread uses nearest-timestamp alignment with a bounded tolerance when two WDO contracts exist.
-- If WDO prices are unavailable, the output is intentionally empty and documented.
+- The WDO spread path uses decoded B3 UMDF/SBE WDO MBO order events when the auxiliary quote CSV has no WDO futures.
+- The WDO top-of-book replay keeps decoded order IDs, applies new/change/delete actions, and emits rows only for positive non-crossed two-sided books.
+- The calendar spread aligns `WDOG26` and `WDOH26` top-of-book rows with nearest-timestamp `merge_asof` tolerance and records source/schema provenance.
 
 ## Volatility/momentum methods
 

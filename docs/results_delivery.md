@@ -34,8 +34,9 @@ outputs/reports/        validation, inventory, protocol and decoded-instrument r
 - `increment_updates.csv` — incremental-feed subset with decoded symbol/side/price/size/order/action where supported.
 - `snapshot.csv` — snapshot-compatible decoded/diagnostic table.
 - `snapshot_updates.csv` — snapshot-source subset.
-- `reconstructed_book.csv` — non-crossed top-of-book reconstructed from decoded B3 MBO events.
-- `wdo_calendar_spread.csv` — WDO futures calendar spread from decoded reconstructed B3 book rows.
+- `reconstructed_book.csv` — non-crossed final top-of-book reconstructed from decoded B3 MBO events.
+- `wdo_top_of_book_timeseries.csv` — event-driven non-crossed WDO top-of-book time series for the selected calendar-spread contracts.
+- `wdo_calendar_spread.csv` — WDO futures calendar spread from decoded WDO MBO top-of-book time series.
 - `volatility_momentum.csv` — quote-derived volatility/momentum feature table.
 - `gold_arbitrage_signals.csv` — aligned B3/MOEX gold arbitrage research table.
 
@@ -91,7 +92,7 @@ Uploaded to Google Drive:
 - Folder: `senior_quantitative_researcher_outputs_f6310ac`
 - Link: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
 - Sharing: anyone with the link can read
-- Uploaded files: 27 generated artifacts
-- Uploaded bytes: 2,713,239,741
+- Uploaded files: 28 generated artifacts
+- Uploaded bytes: 2,727,171,453
 
 The Drive folder preserves the expected `outputs/` subdirectory structure: `csv/`, `intermediate/`, `plots/`, and `reports/`.

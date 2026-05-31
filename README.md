@@ -96,8 +96,8 @@ make all           # all of the above
   - Status: schema-backed decode complete for assignment-critical templates.
 - WDO calendar spread
   - Script/code: `scripts/02_build_wdo_calendar_spread.py`, `spreads.py`
-  - Outputs: `outputs/csv/wdo_calendar_spread.csv`, `outputs/plots/wdo_calendar_spread.png`
-  - Status: computed from decoded B3 reconstructed book.
+  - Outputs: `outputs/csv/wdo_top_of_book_timeseries.csv`, `outputs/csv/wdo_calendar_spread.csv`, `outputs/plots/wdo_calendar_spread.png`
+  - Status: computed as a schema-backed WDO MBO top-of-book time series, then aligned into an intraday calendar-spread series.
 - Volatility/momentum
   - Script/code: `scripts/03_compute_vol_momentum.py`, `features.py`
   - Outputs: `volatility_momentum.csv`, `volatility.png`, `momentum.png`
@@ -137,8 +137,11 @@ Snapshot-compatible decoded rows. Snapshot order rows are decoded where template
 ### `reconstructed_book.csv`
 Final non-crossed top-of-book rows reconstructed from decoded MBO events: `bid_price_1`, `bid_size_1`, `ask_price_1`, `ask_size_1`, `mid_price`, `spread`, `book_depth_available`, `decode_status`.
 
+### `wdo_top_of_book_timeseries.csv`
+Event-driven non-crossed WDO top-of-book time series replayed from decoded B3 MBO order IDs for the selected spread contracts. Includes bid/ask/mid, top-level sizes, book spread, depth, source, and schema provenance.
+
 ### `wdo_calendar_spread.csv`
-WDO futures calendar spread from reconstructed B3 book rows. Includes near/far bid/ask/mid, spread, source, and schema provenance.
+WDO futures calendar spread from the decoded WDO top-of-book time series. Includes near/far bid/ask/mid, spread, source, and schema provenance.
 
 ### `volatility_momentum.csv`
 Quote-derived features from valid, non-crossed, positive top-of-book rows: `ret`, `decision_ts`, `rv_1min`, `ewma_vol`, `mom_30s`, `mom_z`.
