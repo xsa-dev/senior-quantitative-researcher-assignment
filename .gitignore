@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 *.egg-info/
 .DS_Store
+.cmux/
 
 # Raw assignment files stay local / external storage only.
 documents/
