@@ -91,6 +91,8 @@ Uploaded to Google Drive:
 
 - Folder: `senior_quantitative_researcher_outputs_f6310ac`
 - Link: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
+- Russian Google Doc documentation: https://docs.google.com/document/d/17FHnEeDEcN-3uFHe-J6tAI_y6y9su1lNTST3BWxSLX8/edit?usp=drivesdk
+- GitHub repository: https://github.com/xsa-dev/senior-quantitative-researcher-assignment
 - Sharing: anyone with the link can read
 - Uploaded files: 28 generated artifacts
 - Uploaded bytes: 2,741,623,381

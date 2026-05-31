@@ -6,6 +6,10 @@ __pycache__/
 .DS_Store
 .cmux/
 
+# Locally generated Google Doc upload source; the committed source is
+# docs/submission_ru.md plus scripts/create_submission_doc_ru.py.
+docs/submission_ru.html
+
 # Raw assignment files stay local / external storage only.
 documents/
 

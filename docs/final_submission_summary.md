@@ -118,5 +118,10 @@ Validation checks:
 - Raw input data is not committed to GitHub.
 - Generated large outputs are delivered through Google Drive: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
 
+## Submission links
+- GitHub repository: https://github.com/xsa-dev/senior-quantitative-researcher-assignment
+- Russian Google Doc documentation: https://docs.google.com/document/d/17FHnEeDEcN-3uFHe-J6tAI_y6y9su1lNTST3BWxSLX8/edit?usp=drivesdk
+- Google Drive result bundle: https://drive.google.com/drive/folders/1bFTa7zj9hZeBhmgAN0aeZqjb3QWKYxHA
+
 ## Recommended wording for employer/interviewer
 "I first made the B3 PCAP boundary explicit, then resolved the critical blocker by integrating a compatible B3 UMDF/SBE schema and verifying it against the local PCAP frame headers. The final pipeline decodes real SecurityDefinition and MBO order events, builds a WDO instrument master, reconstructs non-crossed top-of-book rows, computes a full intraday WDO calendar-spread time series with schema provenance, and validates that volatility/momentum features are finite and latency-aware. Unknown templates remain diagnostic; I do not fabricate market fields."
